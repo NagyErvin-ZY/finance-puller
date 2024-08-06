@@ -10,6 +10,9 @@ import Pair from './entities/pair.entity';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './shared/interceptors/logger-interceptor';
 import { ResponseFormatInterceptor } from './shared/interceptors/response-formatter.interceptor';
+import { CryptoModule } from './crypto/crypto.module';
+import { MovingAverageModule } from './moving-average/moving-average.module';
+import { DatabaseInitService } from './database-init/database-init.service';
 @Module({
   imports: [
     WinstonModule.forRoot(config().logging.winston),
@@ -18,7 +21,9 @@ import { ResponseFormatInterceptor } from './shared/interceptors/response-format
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
     }),
     AppConfigModule,
-    AdministrationModule
+    AdministrationModule,
+    CryptoModule,
+    MovingAverageModule
   ],
   controllers: [AppController],
   providers: [
@@ -31,6 +36,8 @@ import { ResponseFormatInterceptor } from './shared/interceptors/response-format
       provide: APP_INTERCEPTOR,
       useClass: ResponseFormatInterceptor
     },
+    DatabaseInitService,
+    
   ],
 })
 export class AppModule {}

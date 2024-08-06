@@ -1,9 +1,16 @@
-import { parseEnv } from "src/shared/helpers/config-helper";
+import { parseEnv } from "src/shared/helpers/config.helper";
 import { IFinancePullerConfig } from "./config.type";
 import { format } from "logform"
 import { SERVER_MODE } from "src/shared/enums/config";
 import { transport, transports } from "winston"
 export default (): IFinancePullerConfig => ({
+    thirdParty: {
+        liveCoinWatch: {
+            apiKey: parseEnv<string>('LIVECOINWATCH_API_KEY', null),
+            apiUrl: parseEnv<string>('LIVECOINWATCH_API_URL', 'https://api.livecoinwatch.com'),
+            currency: parseEnv<string>('LIVECOINWATCH_API_PULL_CURRENCY', 'USD'),
+        },
+    },
     database: {
         type: parseEnv<string>('DB_TYPE', 'postgres'),
         host: parseEnv<string>('DB_HOST', 'localhost'),
@@ -17,7 +24,7 @@ export default (): IFinancePullerConfig => ({
         path: parseEnv<string>('SWAGGER_PATH', 'api-docs'),
     },
     server: {
-        port: parseEnv<number>('SERVER_PORT', 3000),
+        port: parseEnv<number>('SERVER_PORT', 3001),
         mode: parseEnv<SERVER_MODE>('SERVER_MODE', SERVER_MODE.DEVELOPMENT)
     },
     logging: {

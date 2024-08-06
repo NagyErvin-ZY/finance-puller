@@ -2,6 +2,13 @@ import { WinstonModuleOptions } from "nest-winston";
 import { SERVER_MODE } from "src/shared/enums/config";
 
 export interface IFinancePullerConfig {
+    thirdParty: {
+        liveCoinWatch: {
+            apiKey: string;
+            apiUrl: string;
+            currency: string;
+        },
+    },
     database: {
         type: string;
         host: string;

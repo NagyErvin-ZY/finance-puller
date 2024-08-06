@@ -8,9 +8,4 @@ export class PairRegisterDto {
     @IsString() 
     @IsUppercase()
     base: string;
-
-    @ApiProperty({ description: 'Quote instrument in uppercase like USD' })
-    @IsString()
-    @IsUppercase()
-    quote: string;
 }
