@@ -1,55 +1,86 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
 import { ORDER_TYPE } from 'src/entities/enums/pair-tick.enums';
 import Pair from 'src/entities/pair.entity';
 import { Repository } from 'typeorm';
+import { from, Observable } from 'rxjs';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
+import { LOG_LEVEL } from 'src/shared/enums/log';
 
 @Injectable()
 export class InstrumentDataService {
 
     constructor(
+        @Inject(WINSTON_MODULE_NEST_PROVIDER)
+        private readonly logger: Logger,
         @InjectRepository(Pair)
         private readonly pairRepository: Repository<Pair>,
         private readonly configService: ConfigService
     ) {}
 
+    /**
+     * Gets the latest N prices for a given pair.
+     * @param {Pair} pair - The pair entity.
+     * @param {number} period - The number of latest prices to retrieve.
+     * @returns {Promise<number[]>} - A promise that resolves to an array of prices.
+     */
     getLatestNPricesForPair = async (pair: Pair, period: number): Promise<number[]> => {
-        // Get last N prices for pair
         const tableName = `pair_tick_data_${pair.base}${pair.quote}`;
-        return this.pairRepository.query(`
-            SELECT price FROM ${tableName} ORDER BY timestamp DESC LIMIT ${period}
-        `).then((prices: { price: number }[]) => {
-            return prices.map(price => Number(price.price));
-        });
-    }
-
-    pullData = async (symbol: string) => {
+        this.logger.log(LOG_LEVEL.INFO,`Fetching latest ${period} prices for pair ${pair.base}/${pair.quote} from table ${tableName}`);
         try {
-            // Fetch data from the API
-            const result = await axios.post(`${this.configService.get('thirdParty.liveCoinWatch.apiUrl')}/coins/single`, {
-                currency: this.configService.get('thirdParty.liveCoinWatch.currency'),
-                code: symbol
-            }, {
-                headers: {
-                    'x-api-key': this.configService.get('thirdParty.liveCoinWatch.apiKey')
-                }
-            });
-    
-            const data = result.data;
-    
-            // Store the data
-            await this.storePairTickData(symbol, data);
-            
+            const prices = await this.pairRepository.query(`
+                SELECT price FROM ${tableName} ORDER BY timestamp DESC LIMIT ${period}
+            `);
+            this.logger.log(LOG_LEVEL.INFO,`Fetched prices: ${JSON.stringify(prices)}`);
+            return prices.map(price => Number(price.price));
         } catch (error) {
-            console.error(`Error pulling data for symbol ${symbol}:`, error);
+            this.logger.error(`Error fetching prices for pair ${pair.base}/${pair.quote}: ${error.message}`);
+            throw error;
         }
     }
 
-    storePairTickData = async (symbol: string, data: any) => {
+    /**
+     * Pulls data for a given symbol from the API.
+     * @param {string} symbol - The symbol to fetch data for.
+     * @returns {Observable<void>} - An observable that completes when the data is pulled and stored.
+     */
+    pullData = (symbol: string): Observable<void> => {
+        return from((async () => {
+            this.logger.log(LOG_LEVEL.INFO,`Pulling data for symbol ${symbol}`);
+            try {
+                const result = await axios.post(`${this.configService.get('thirdParty.liveCoinWatch.apiUrl')}/coins/single`, {
+                    currency: this.configService.get('thirdParty.liveCoinWatch.currency'),
+                    code: symbol
+                }, {
+                    headers: {
+                        'x-api-key': this.configService.get('thirdParty.liveCoinWatch.apiKey')
+                    }
+                });
+        
+                const data = result.data;
+                this.logger.log(LOG_LEVEL.INFO,`Pulled data for symbol ${symbol}: ${JSON.stringify(data)}`);
+        
+                await this.storePairTickData(symbol, data);
+                
+            } catch (error) {
+                this.logger.error(`Error pulling data for symbol ${symbol}: ${error.message}`);
+                throw error;
+            }
+        })());
+    }
+
+    /**
+     * Stores pair tick data in the database.
+     * @param {string} symbol - The symbol of the pair.
+     * @param {any} data - The data to store.
+     * @returns {Promise<void>} - A promise that resolves when the data is stored.
+     */
+    storePairTickData = async (symbol: string, data: any): Promise<void> => {
+        this.logger.log(LOG_LEVEL.INFO,`Storing pair tick data for symbol ${symbol}`);
         await this.pairRepository.manager.transaction(async transactionalEntityManager => {
-            // Create a PairTickData entity
             const pairTickData = {
                 pair_id: `${symbol.toLowerCase()}${this.configService.get('thirdParty.liveCoinWatch.currency').toLowerCase()}`,
                 order_type: ORDER_TYPE.NONE_MARKET_FETCH_LATEST_EXECUTION,
@@ -58,13 +89,19 @@ export class InstrumentDataService {
                 timestamp: new Date()
             };
 
-            // Save the PairTickData entity to a dynamically named table
             const tableName = `pair_tick_data_${symbol.toLowerCase()}${this.configService.get('thirdParty.liveCoinWatch.currency').toLowerCase()}`;
-            await transactionalEntityManager.createQueryBuilder()
-                .insert()
-                .into(tableName)
-                .values(pairTickData)
-                .execute();
+            this.logger.log(LOG_LEVEL.INFO,`Inserting data into table ${tableName}: ${JSON.stringify(pairTickData)}`);
+            try {
+                await transactionalEntityManager.createQueryBuilder()
+                    .insert()
+                    .into(tableName)
+                    .values(pairTickData)
+                    .execute();
+                this.logger.log(LOG_LEVEL.INFO,`Successfully stored pair tick data for symbol ${symbol}`);
+            } catch (error) {
+                this.logger.error(`Error storing pair tick data for symbol ${symbol}: ${error.message}`);
+                throw error;
+            }
         });
     }
 }

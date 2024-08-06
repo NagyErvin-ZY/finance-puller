@@ -3,6 +3,7 @@ import { IFinancePullerConfig } from "./config.type";
 import { format } from "logform"
 import { SERVER_MODE } from "src/shared/enums/config";
 import { transport, transports } from "winston"
+
 export default (): IFinancePullerConfig => ({
     thirdParty: {
         liveCoinWatch: {

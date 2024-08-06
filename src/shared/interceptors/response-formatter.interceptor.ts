@@ -12,6 +12,12 @@ import {
 
 @Injectable()
 export class ResponseFormatInterceptor implements NestInterceptor {
+    /**
+     * Intercepts the response to format it in a standard structure.
+     * @param {ExecutionContext} context - The execution context of the request.
+     * @param {CallHandler} next - The next handler in the request pipeline.
+     * @returns {Observable<any>} - The observable stream of the formatted response.
+     */
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         return next.handle().pipe(
             map((data) => {

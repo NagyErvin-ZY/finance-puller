@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { Logger } from 'winston';
-import { from } from 'rxjs';
+import { from, Observable } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import Pair from 'src/entities/pair.entity';
 import { ConfigService } from '@nestjs/config';
@@ -16,18 +16,24 @@ export class AdministrationService {
         @InjectRepository(Pair)
         private pairRepository: Repository<Pair>,
         private configService: ConfigService
-    ) {}
+    ) { }
 
-    registerPair(base: string) {
+    /**
+     * Registers a new pair and creates a corresponding table.
+     * 
+     * @param {string} base - The base currency of the pair.
+     * @returns {Observable<string>} An observable that emits a success message upon completion.
+     */
+    registerPair(base: string): Observable<string> {
         const quote = this.configService.get<string>('thirdParty.liveCoinWatch.currency');
         this.logger.log("info", 'Starting registerPair process', { base, quote });
-    
+
         const newPair = this.pairRepository.create({ base, quote });
-    
+
         return from(this.pairRepository.save(newPair)).pipe(
             tap(async () => {
                 this.logger.log("info", 'Pair successfully registered', { base, quote });
-    
+
                 // Create a new table dynamically named based on the pair
                 const tableName = `pair_tick_data_${base.toLowerCase()}${quote.toLowerCase()}`;
                 await this.pairRepository.query(`
@@ -49,12 +55,17 @@ export class AdministrationService {
         );
     }
 
-    getAllPairs() {
-        this.logger.log("info",'Starting getAllPairs process');
+    /**
+     * Retrieves all pairs from the repository.
+     * 
+     * @returns {Observable<Pair[]>} An observable that emits the list of pairs.
+     */
+    getAllPairs(): Observable<Pair[]> {
+        this.logger.log("info", 'Starting getAllPairs process');
 
         return from(this.pairRepository.find()).pipe(
-            tap((pairs) => this.logger.log("info",'Pairs successfully retrieved', { pairs })),
-            catchError((error) => {
+            tap((pairs: Pair[]) => this.logger.log("info", 'Pairs successfully retrieved', { pairs })),
+            catchError((error: any) => {
                 this.logger.error('Error retrieving pairs', { error });
                 throw error;
             })

@@ -12,6 +12,8 @@ import { MovingAverageCalcService } from 'src/shared/services/moving-average-cal
 import { InstrumentDataService } from 'src/shared/services/instrument-data/instrument-data.service';
 import { Repository } from 'typeorm';
 import { CronService } from 'src/shared/services/cron/cron.service';
+import { from, Observable } from 'rxjs';
+import { switchMap, tap } from 'rxjs/operators';
 
 @Injectable()
 export class CryptoService {
@@ -22,30 +24,47 @@ export class CryptoService {
         private readonly movingAverageCalcService: MovingAverageCalcService,
     ) {  }
 
-    async pullSymbolJob(symbol: string) {
-        await this.instrumentDataService.pullData(symbol);
-        await this.movingAverageCalcService.calculateMovingaveragesForPair({
-            base: symbol,
-            quote: this.configService.get<string>('thirdParty.liveCoinWatch.currency')
-        });
+    /**
+     * Pulls data for a given symbol and calculates moving averages.
+     * 
+     * @param {string} symbol - The symbol to pull data for.
+     * @returns {Observable<void>} An observable that completes when the job is done.
+     */
+    pullSymbolJob(symbol: string): Observable<void> {
+        return from(this.instrumentDataService.pullData(symbol)).pipe(
+            switchMap(() => this.movingAverageCalcService.calculateMovingaveragesForPair({
+                base: symbol,
+                quote: this.configService.get<string>('thirdParty.liveCoinWatch.currency')
+            })),
+            tap(() => {})
+        );
     }
-        
 
-    startCronJob(
-        symbol: string,
-        intervalCron: string
-    ) {
+    /**
+     * Starts a cron job for a given symbol and interval.
+     * 
+     * @param {string} symbol - The symbol to start the cron job for.
+     * @param {string} intervalCron - The cron interval.
+     * @returns {void}
+     */
+    startCronJob(symbol: string, intervalCron: string): void {
         const jobId = `${symbol}-${intervalCron}`;
         this.cronService.startCronJob(
             jobId, 
-            async () => await this.pullSymbolJob(symbol),
+            () => this.pullSymbolJob(symbol).subscribe(),
             intervalCron
         );
     }
 
-    stopCronJob(symbol: string, intervalCron: string) {
+    /**
+     * Stops a cron job for a given symbol and interval.
+     * 
+     * @param {string} symbol - The symbol to stop the cron job for.
+     * @param {string} intervalCron - The cron interval.
+     * @returns {void}
+     */
+    stopCronJob(symbol: string, intervalCron: string): void {
         const jobId = `${symbol}-${intervalCron}`;
         this.cronService.stopCronJob(jobId);
     }
-
 }

@@ -16,6 +16,12 @@ import { randomUUID } from 'crypto';
   export class LoggingInterceptor implements NestInterceptor {
     constructor(@Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: Logger) {}
   
+      /**
+     * Intercepts the request and response to log details.
+     * @param {ExecutionContext} context - The execution context of the request.
+     * @param {CallHandler} next - The next handler in the request pipeline.
+     * @returns {Observable<any>} - The observable stream of the response.
+     */
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
       const request = context.switchToHttp().getRequest();
       const { method, url, headers, body, params, query, ip } = request;
