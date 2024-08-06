@@ -11,6 +11,7 @@ export default (): IFinancePullerConfig => ({
         username: parseEnv<string>('DB_USERNAME', 'postgres'),
         password: parseEnv<string>('DB_PASSWORD', 'postgres'),
         database: parseEnv<string>('DB_NAME', 'postgres'),
+        synchronize: parseEnv<boolean>('DB_SYNCHRONIZE', true),
     },
     swagger: {
         path: parseEnv<string>('SWAGGER_PATH', 'api-docs'),

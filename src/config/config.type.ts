@@ -9,6 +9,7 @@ export interface IFinancePullerConfig {
         username: string;
         password: string;
         database: string;
+        synchronize: boolean;
     }
     server: {
         port: number;
