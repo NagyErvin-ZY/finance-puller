@@ -4,6 +4,7 @@ import config from './config';
 
 @Module({
   imports: [
+    
     ConfigModule.forRoot({
       load: [config],
     }),

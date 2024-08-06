@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Put, Query, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Put, Query, Get, Param, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MovingAverageService } from './moving-average.service';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
@@ -23,12 +23,12 @@ export class MovingAverageController {
         @Param('symbol') symbol: string,
         @Query('period') period: number,
     ) {
-        return this.movingAverageService.registerMovingAverage(symbol, period);
+        return this.movingAverageService.registerMovingAverage(symbol, period)
     }
 
     @Get("/:symbol")
     @ApiOperation({ summary: 'Get the moving average for a symbol' })
-    @ApiQuery({ name: 'symbol', description: 'The symbol to get the moving average for', type: String })
+    @ApiParam({ name: 'symbol', description: 'The symbol to get the moving average for', type: String })
     @ApiQuery({ name: 'period', description: 'The period for the moving average', type: Number })
     @ApiResponse({ status: 200, description: 'The moving average data.' })
     async getMovingAverage(
@@ -36,11 +36,14 @@ export class MovingAverageController {
         @Query('period') period: number,
     ) {
         const average = await lastValueFrom(this.movingAverageService.getMovingAverage(symbol, period));
+        if (!average) {
+            throw new BadRequestException('Moving average not found');
+        }
         const [price] = await this.instrumentDataService.getLatestNPricesForPair({
             base: symbol,
             quote: this.configService.get<string>('thirdParty.liveCoinWatch.currency')
         }, 1);
 
-        return { ...average, price };
+        return { ...average as any, price };
     }
 }

@@ -27,7 +27,7 @@ export class ResponseFormatInterceptor implements NestInterceptor {
                     message: getReasonPhrase(response.statusCode),
                     data: data,
                 };
-            }),
+            })
         
         );
     }

@@ -25,7 +25,7 @@ export default (): IFinancePullerConfig => ({
         path: parseEnv<string>('SWAGGER_PATH', 'api-docs'),
     },
     server: {
-        port: parseEnv<number>('SERVER_PORT', 3001),
+        port: parseEnv<number>('SERVER_PORT', 3000),
         mode: parseEnv<SERVER_MODE>('SERVER_MODE', SERVER_MODE.DEVELOPMENT)
     },
     logging: {

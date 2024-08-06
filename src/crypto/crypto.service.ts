@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,12 +12,17 @@ import { MovingAverageCalcService } from 'src/shared/services/moving-average-cal
 import { InstrumentDataService } from 'src/shared/services/instrument-data/instrument-data.service';
 import { Repository } from 'typeorm';
 import { CronService } from 'src/shared/services/cron/cron.service';
-import { from, Observable } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
+import { from, Observable, of } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
+import { LOG_LEVEL } from 'src/shared/enums/log';
 
 @Injectable()
 export class CryptoService {
     constructor(
+        @Inject(WINSTON_MODULE_NEST_PROVIDER)
+        private readonly logger: Logger,
         private readonly configService: ConfigService,
         private readonly cronService: CronService,
         private readonly instrumentDataService: InstrumentDataService,
@@ -35,10 +40,11 @@ export class CryptoService {
             switchMap(() => this.movingAverageCalcService.calculateMovingaveragesForPair({
                 base: symbol,
                 quote: this.configService.get<string>('thirdParty.liveCoinWatch.currency')
-            })),
-            tap(() => {})
+            }))
         );
     }
+
+   
 
     /**
      * Starts a cron job for a given symbol and interval.
@@ -47,12 +53,38 @@ export class CryptoService {
      * @param {string} intervalCron - The cron interval.
      * @returns {void}
      */
-    startCronJob(symbol: string, intervalCron: string): void {
+    startCronJob(symbol: string, intervalCron: string): Observable<any> {
         const jobId = `${symbol}-${intervalCron}`;
-        this.cronService.startCronJob(
-            jobId, 
-            () => this.pullSymbolJob(symbol).subscribe(),
-            intervalCron
+        if(this.cronService.isCronJobRunning(jobId) === true) {
+            this.logger.error(`Cron job already running for symbol ${symbol}`);
+            throw new BadRequestException('Cron job already running');
+        }
+        
+        return from(this.instrumentDataService.isPairRegistered(symbol)).pipe(
+            switchMap(isRegistered => {
+                if (!isRegistered) {
+                    this.logger.error(`Pair not registered: ${symbol}`);
+                    throw new BadRequestException('Pair not registered');
+                }
+                this.cronService.startCronJob(
+                    jobId, 
+                    () => {
+                        this.pullSymbolJob(symbol).pipe(
+                            catchError((error) => {
+                                this.stopCronJob(symbol, intervalCron);
+                                this.logger.error('Error pulling symbol data self-destructing cron job', { error });
+                                return of();
+                            })
+                        ).subscribe();
+                    },
+                    intervalCron
+                );
+                return of("Cron job started");
+            }),
+            catchError(error => {
+                this.logger.error(`Error starting cron job for symbol ${symbol}: ${error.message}`);
+                throw error; // Rethrow the error to propagate it
+            })
         );
     }
 

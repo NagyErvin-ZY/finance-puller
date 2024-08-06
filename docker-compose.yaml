@@ -1,15 +1,33 @@
-#Docker compose file to run postgres
-version: '3.1'
+version: '3.8'
 
 services:
+  nestjs-app:
+    build: .
+    container_name: nestjs-app
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: nestuser
+      DB_PASSWORD: nestpassword
+      DB_DATABASE: nestdb
+
   postgres:
-    image: postgres
+    image: postgres:13
     container_name: postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: nestuser
+      POSTGRES_PASSWORD: nestpassword
+      POSTGRES_DB: nestdb
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

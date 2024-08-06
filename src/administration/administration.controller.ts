@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Put, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { PairRegisterDto } from './dto/pair-register.dto';
 import { AdministrationService } from './administration.service';
 import { ConfigService } from '@nestjs/config';
@@ -18,6 +18,7 @@ export class AdministrationController {
 
     @Put()
     @ApiOperation({ summary: 'Register a new tradable pair like EUR or BTC or APPLE' })
+    @ApiQuery({ name: 'base', description: 'The base currency of the pair', type: String })
     @ApiResponse({ status: 200, description: 'Pair registered' })
     registerPair(@Query() query: PairRegisterDto) {
         this.logger.log(LOG_LEVEL.INFO, 'Registering pair', query);

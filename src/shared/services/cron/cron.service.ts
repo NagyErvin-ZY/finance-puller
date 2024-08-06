@@ -46,6 +46,17 @@ export class CronService {
         return of(undefined);
     }
 
+
+    /**
+     * Checks if a cron job with the given job ID is currently running.
+     * 
+     * @param {string} jobId - The ID of the cron job to check.
+     * @returns {boolean} - Returns true if the cron job is running, false otherwise.
+     */
+    isCronJobRunning(jobId: string): boolean {
+        return this.jobs.has(jobId);
+    }
+
     /**
      * Stops a running cron job.
      * @param {string} jobId - The unique identifier for the job.
