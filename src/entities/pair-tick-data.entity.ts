@@ -1,5 +1,5 @@
 //pair tick data entity
-import { Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, ManyToOne, AfterInsert } from 'typeorm';
 import { ORDER_TYPE } from './enums/pair-tick.enums';
 import Pair from './pair.entity';
 

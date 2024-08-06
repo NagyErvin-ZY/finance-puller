@@ -31,10 +31,4 @@ export class CryptoController {
     this.cryptoService.stopCronJob(symbol, intervalCron);
     return `Stopped fetching data for ${symbol} at interval ${intervalCron}`;
   }
-
-  @Get("/running")
-  @ApiOperation({ summary: 'Get all running cron jobs' })
-  getAllRunningJobs() {
-    return this.cryptoService.getAllRunningJobs();
-  }
 }

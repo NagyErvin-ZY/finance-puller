@@ -10,5 +10,3 @@ export default class Pair {
   @PrimaryColumn()
   quote: string;
 }
-
-//Combined key of base+quote

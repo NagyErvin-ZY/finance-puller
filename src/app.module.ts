@@ -12,7 +12,9 @@ import { LoggingInterceptor } from './shared/interceptors/logger-interceptor';
 import { ResponseFormatInterceptor } from './shared/interceptors/response-formatter.interceptor';
 import { CryptoModule } from './crypto/crypto.module';
 import { MovingAverageModule } from './moving-average/moving-average.module';
-import { DatabaseInitService } from './database-init/database-init.service';
+import { MovingAverageCalcService } from './shared/services/moving-average-calc/moving-average-calc.service';
+import { InstrumentDataService } from './shared/services/instrument-data/instrument-data.service';
+
 @Module({
   imports: [
     WinstonModule.forRoot(config().logging.winston),
@@ -36,8 +38,6 @@ import { DatabaseInitService } from './database-init/database-init.service';
       provide: APP_INTERCEPTOR,
       useClass: ResponseFormatInterceptor
     },
-    DatabaseInitService,
-    
   ],
 })
 export class AppModule {}
